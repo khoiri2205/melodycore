@@ -244,7 +244,7 @@ client.on('interactionCreate', async interaction => {
             }
 
         } catch (error) {
-            console.error("[LOG ERROR]:", error.message || error.toString() || JSON.stringify(error));
+            console.error("[LOG ERROR]:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
             await interaction.editReply(`❌ Error: ${error.message}`);
         }
     }
