@@ -94,22 +94,10 @@ async function ensureYtDlp() {
 }
 
 
-function getAudioStream(url) {
-    console.log(`[YT-DLP] Streaming: ${url}`);
-    const proc = spawn(YTDLP_PATH, [
-        '-f', 'bestaudio/best',
-        '--no-playlist',
-        '--extractor-args', 'youtube:player_client=android,web',
-        '-o', '-',
-        url
-    ]);
-    proc.stderr.on('data', (data) => {
-        console.log(`[YT-DLP] ${data.toString().trim()}`);
-    });
-    proc.on('error', (err) => {
-        console.error(`[YT-DLP ERROR] ${err.message}`);
-    });
-    return proc.stdout;
+async function getAudioStream(url) {
+    console.log(`[STREAM] Streaming: ${url}`);
+    const stream = await play.stream(url);
+    return stream;
 }
 
 async function getVideoTitle(url) {
@@ -235,7 +223,7 @@ client.on('interactionCreate', async interaction => {
             }
 
         } catch (error) {
-            console.error("[LOG ERROR]:", error.message || JSON.stringify(error));
+            console.error("[LOG ERROR]:", error.message || JSON.stringify(error, null, 2));
             await interaction.editReply(`❌ Error: ${error.message}`);
         }
     }
@@ -277,8 +265,8 @@ async function playNext(guildId) {
     console.log(`[PLAYING] ${song.title}`);
 
     try {
-        const audioStream = getAudioStream(song.url);
-        const resource = createAudioResource(audioStream, { inputType: StreamType.Arbitrary });
+        const stream = await getAudioStream(song.url);
+        const resource = createAudioResource(stream.stream, { inputType: stream.type });
         serverQueue.player.play(resource);
         console.log(`[PLAYING] ✅ Player mulai!`);
     } catch (error) {
