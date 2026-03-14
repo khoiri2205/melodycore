@@ -4,6 +4,7 @@ const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerSta
 const play = require('play-dl');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const SpotifyWebApi = require('spotify-web-api-node');
 
 const client = new Client({ 
