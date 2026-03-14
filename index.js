@@ -61,7 +61,7 @@ async function getSpotifyPlaylist(url) {
 }
 
 const queues = new Map();
-const YTDLP_PATH = path.join(__dirname, 'yt-dlp.exe');
+const YTDLP_PATH = process.platform === "win32" ? path.join(__dirname, "yt-dlp.exe") : "yt-dlp";
 
 function getAudioStream(url) {
     console.log(`[YT-DLP] Streaming: ${url}`);
