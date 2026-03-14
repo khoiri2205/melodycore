@@ -122,13 +122,13 @@ async function getAudioStream(url) {
 }
 
 async function getVideoTitle(url) {
-    return new Promise((resolve, reject) => {
-        const proc = spawn(YTDLP_PATH, ['--get-title', '--no-playlist', url]);
-        let title = '';
-        proc.stdout.on('data', (data) => { title += data.toString(); });
-        proc.on('close', () => resolve(title.trim() || 'Unknown Title'));
-        proc.on('error', reject);
-    });
+    try {
+        const info = await play.video_info(url);
+        return info.video_details.title || 'Unknown Title';
+    } catch(e) {
+        console.log('[TITLE ERROR]', e.message);
+        return 'Unknown Title';
+    }
 }
 
 async function searchYouTube(query) {
@@ -244,7 +244,7 @@ client.on('interactionCreate', async interaction => {
             }
 
         } catch (error) {
-            console.error("[LOG ERROR]:", error.message || JSON.stringify(error, null, 2));
+            console.error("[LOG ERROR]:", error.message || error.toString() || JSON.stringify(error));
             await interaction.editReply(`❌ Error: ${error.message}`);
         }
     }
