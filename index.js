@@ -36,15 +36,32 @@ async function refreshSpotifyToken() {
 }
 
 async function getSpotifyTrack(url) {
-    const cleanUrl = url.split("?")[0];
-    const match = cleanUrl.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-    if (!match) throw new Error('Link Spotify tidak valid! Pastikan link track lagu, bukan playlist.');
+    const cleanUrl = url.split('?')[0];
+    const match = cleanUrl.match(/spotify[.]com[/]track[/]([a-zA-Z0-9]+)/);
+    if (!match) throw new Error('Link Spotify tidak valid!');
     const trackId = match[1];
-    const data = await spotifyApi.getTrack(trackId);
-    const track = data.body;
-    const title = track.name;
-    const artist = track.artists.map(a => a.name).join(', ');
-    return `${title} ${artist}`;
+    const https = require('https');
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'open.spotify.com',
+            path: '/track/' + trackId,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        };
+        https.get(options, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                const titleMatch = data.match(/<title>([^<]+)<[/]title>/);
+                if (titleMatch) {
+                    const title = titleMatch[1].replace(' | Spotify', '').trim();
+                    console.log('[SPOTIFY] Track: ' + title);
+                    resolve(title);
+                } else {
+                    reject(new Error('Tidak bisa ambil judul dari Spotify!'));
+                }
+            });
+        }).on('error', reject);
+    });
 }
 
 async function getSpotifyPlaylist(url) {
@@ -139,12 +156,11 @@ async function getLyrics(title) {
         artist = parts[0].trim();
         song = parts.slice(1).join(' - ').trim();
     } else {
-        const words = title.split(' ');
-        artist = words[0];
-        song = words.slice(1).join(' ');
+        artist = title.split(' ')[0];
+        song = title.split(' ').slice(1).join(' ');
     }
-    song = song.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
-    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`;
+    song = song.replace(/[(][^)]*[)]/g, '').replace(/[[[][^\]]*[]]/g, '').trim();
+    const url = 'https://api.lyrics.ovh/v1/' + encodeURIComponent(artist) + '/' + encodeURIComponent(song);
     return new Promise((resolve, reject) => {
         https.get(url, res => {
             let data = '';
@@ -305,14 +321,12 @@ client.on('interactionCreate', async interaction => {
         try {
             const lyrics = await getLyrics(song.title);
             const chunks = lyrics.match(/[\s\S]{1,1900}/g) || [];
-            await interaction.editReply(`🎵 **${song.title}**
-
-${chunks[0]}`);
+            await interaction.editReply('🎵 **' + song.title + '**\n\n' + chunks[0]);
             for (let i = 1; i < Math.min(chunks.length, 3); i++) {
                 await interaction.followUp(chunks[i]);
             }
         } catch(e) {
-            await interaction.editReply(`❌ ${e.message}`);
+            await interaction.editReply('❌ ' + e.message);
         }
     }
 
