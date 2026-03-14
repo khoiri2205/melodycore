@@ -36,7 +36,8 @@ async function refreshSpotifyToken() {
 }
 
 async function getSpotifyTrack(url) {
-    const match = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+    const cleanUrl = url.split("?")[0];
+    const match = cleanUrl.match(/spotify.com/track/([a-zA-Z0-9]+)/);
     if (!match) throw new Error('Link Spotify tidak valid! Pastikan link track lagu, bukan playlist.');
     const trackId = match[1];
     const data = await spotifyApi.getTrack(trackId);
@@ -47,7 +48,8 @@ async function getSpotifyTrack(url) {
 }
 
 async function getSpotifyPlaylist(url) {
-    const match = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+    const cleanUrl = url.split("?")[0];
+    const match = cleanUrl.match(/spotify.com/playlist/([a-zA-Z0-9]+)/);
     if (!match) throw new Error('Link Spotify playlist tidak valid!');
     const playlistId = match[1];
     const data = await spotifyApi.getPlaylist(playlistId);
@@ -233,7 +235,7 @@ client.on('interactionCreate', async interaction => {
             }
 
         } catch (error) {
-            console.error("[LOG ERROR]:", error.message);
+            console.error("[LOG ERROR]:", error.message || JSON.stringify(error));
             await interaction.editReply(`❌ Error: ${error.message}`);
         }
     }
