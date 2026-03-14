@@ -68,6 +68,14 @@ const YTDLP_PATH = process.platform === 'win32'
     ? path.join(__dirname, 'yt-dlp.exe')
     : path.join(__dirname, 'yt-dlp');
 
+async function ensureCookies() {
+    const cookiesPath = '/app/cookies.txt';
+    if (process.env.YT_COOKIES) {
+        fs.writeFileSync(cookiesPath, process.env.YT_COOKIES);
+        console.log('[COOKIES] cookies.txt dibuat dari env!');
+    }
+}
+
 async function ensureYtDlp() {
     if (process.platform === 'win32') return;
     const localPath = path.join(__dirname, 'yt-dlp');
@@ -96,8 +104,20 @@ async function ensureYtDlp() {
 
 async function getAudioStream(url) {
     console.log(`[STREAM] Streaming: ${url}`);
-    const stream = await play.stream(url);
-    return stream;
+    try {
+        const stream = await play.stream(url);
+        return stream;
+    } catch(e) {
+        console.log('[STREAM] play-dl failed, trying yt-dlp...');
+        const cookiesPath = '/app/cookies.txt';
+        const args = ['-f', 'bestaudio/best', '--no-playlist', '-o', '-'];
+        if (fs.existsSync(cookiesPath)) args.push('--cookies', cookiesPath);
+        args.push(url);
+        const proc = spawn(YTDLP_PATH, args);
+        proc.stderr.on('data', (d) => console.log('[YT-DLP]', d.toString().trim()));
+        proc.on('error', (err) => console.error('[YT-DLP ERROR]', err.message));
+        return { stream: proc.stdout, type: StreamType.Arbitrary };
+    }
 }
 
 async function getVideoTitle(url) {
@@ -280,6 +300,7 @@ async function playNext(guildId) {
 client.once('clientReady', async () => {
     console.log('✅ MELODYCORE SUDAH HIDUP!');
     console.log(`Bot login sebagai: ${client.user.tag}`);
+    await ensureCookies();
     await ensureYtDlp();
     await refreshSpotifyToken();
 });
