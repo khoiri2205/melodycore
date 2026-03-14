@@ -61,7 +61,11 @@ async function getSpotifyPlaylist(url) {
 }
 
 const queues = new Map();
-const YTDLP_PATH = process.platform === "win32" ? path.join(__dirname, "yt-dlp.exe") : "yt-dlp";
+const YTDLP_PATH = process.platform === 'win32'
+    ? path.join(__dirname, 'yt-dlp.exe')
+    : ['/usr/local/bin/yt-dlp', '/root/.local/bin/yt-dlp', '/usr/bin/yt-dlp']
+        .find(p => { try { require('fs').accessSync(p); return true; } catch { return false; } })
+      || 'yt-dlp';
 
 function getAudioStream(url) {
     console.log(`[YT-DLP] Streaming: ${url}`);
