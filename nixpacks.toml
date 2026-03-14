@@ -2,7 +2,7 @@
 nixPkgs = ["ffmpeg", "nodejs_20"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm install", "npm install -g node-gyp"]
 
 [start]
 cmd = "node index.js"
