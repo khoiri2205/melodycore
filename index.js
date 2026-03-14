@@ -36,15 +36,32 @@ async function refreshSpotifyToken() {
 }
 
 async function getSpotifyTrack(url) {
-    const cleanUrl = url.split("?")[0];
+    const cleanUrl = url.split('?')[0];
     const match = cleanUrl.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-    if (!match) throw new Error('Link Spotify tidak valid! Pastikan link track lagu, bukan playlist.');
+    if (!match) throw new Error('Link Spotify tidak valid!');
     const trackId = match[1];
-    const data = await spotifyApi.getTrack(trackId);
-    const track = data.body;
-    const title = track.name;
-    const artist = track.artists.map(a => a.name).join(', ');
-    return `${title} ${artist}`;
+    const https = require('https');
+    return new Promise((resolve, reject) => {
+        const options = {
+            hostname: 'open.spotify.com',
+            path: '/track/' + trackId,
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        };
+        https.get(options, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                const titleMatch = data.match(/<title>([^<]+)<\/title>/);
+                if (titleMatch) {
+                    const title = titleMatch[1].replace(' | Spotify', '').trim();
+                    console.log('[SPOTIFY] Track: ' + title);
+                    resolve(title);
+                } else {
+                    reject(new Error('Tidak bisa ambil judul dari Spotify!'));
+                }
+            });
+        }).on('error', reject);
+    });
 }
 
 async function getSpotifyPlaylist(url) {
