@@ -36,32 +36,15 @@ async function refreshSpotifyToken() {
 }
 
 async function getSpotifyTrack(url) {
-    const cleanUrl = url.split('?')[0];
+    const cleanUrl = url.split("?")[0];
     const match = cleanUrl.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-    if (!match) throw new Error('Link Spotify tidak valid!');
+    if (!match) throw new Error('Link Spotify tidak valid! Pastikan link track lagu, bukan playlist.');
     const trackId = match[1];
-    const https = require('https');
-    return new Promise((resolve, reject) => {
-        const options = {
-            hostname: 'open.spotify.com',
-            path: '/track/' + trackId,
-            headers: { 'User-Agent': 'Mozilla/5.0' }
-        };
-        https.get(options, res => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                const titleMatch = data.match(/<title>([^<]+)<\/title>/);
-                if (titleMatch) {
-                    const title = titleMatch[1].replace(' | Spotify', '').trim();
-                    console.log('[SPOTIFY] Track: ' + title);
-                    resolve(title);
-                } else {
-                    reject(new Error('Tidak bisa ambil judul dari Spotify!'));
-                }
-            });
-        }).on('error', reject);
-    });
+    const data = await spotifyApi.getTrack(trackId);
+    const track = data.body;
+    const title = track.name;
+    const artist = track.artists.map(a => a.name).join(', ');
+    return `${title} ${artist}`;
 }
 
 async function getSpotifyPlaylist(url) {
@@ -146,6 +129,37 @@ async function getVideoTitle(url) {
         console.log('[TITLE ERROR]', e.message);
         return 'Unknown Title';
     }
+}
+
+async function getLyrics(title) {
+    const https = require('https');
+    const parts = title.split(' - ');
+    let artist, song;
+    if (parts.length >= 2) {
+        artist = parts[0].trim();
+        song = parts.slice(1).join(' - ').trim();
+    } else {
+        const words = title.split(' ');
+        artist = words[0];
+        song = words.slice(1).join(' ');
+    }
+    song = song.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '').trim();
+    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`;
+    return new Promise((resolve, reject) => {
+        https.get(url, res => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(data);
+                    if (json.lyrics) resolve(json.lyrics);
+                    else reject(new Error('Lirik tidak ditemukan!'));
+                } catch(e) {
+                    reject(new Error('Lirik tidak ditemukan!'));
+                }
+            });
+        }).on('error', reject);
+    });
 }
 
 async function searchYouTube(query) {
@@ -281,6 +295,25 @@ client.on('interactionCreate', async interaction => {
         serverQueue.connection.destroy();
         queues.delete(interaction.guildId);
         await interaction.reply("⏹️ Musik dihentikan.");
+    }
+
+    if (interaction.commandName === 'lyrics') {
+        const serverQueue = queues.get(interaction.guildId);
+        if (!serverQueue || serverQueue.songs.length === 0) return interaction.reply('❌ Tidak ada lagu yang sedang diputar!');
+        const song = serverQueue.songs[0];
+        await interaction.deferReply();
+        try {
+            const lyrics = await getLyrics(song.title);
+            const chunks = lyrics.match(/[\s\S]{1,1900}/g) || [];
+            await interaction.editReply(`🎵 **${song.title}**
+
+${chunks[0]}`);
+            for (let i = 1; i < Math.min(chunks.length, 3); i++) {
+                await interaction.followUp(chunks[i]);
+            }
+        } catch(e) {
+            await interaction.editReply(`❌ ${e.message}`);
+        }
     }
 
     if (interaction.commandName === 'queue') {
