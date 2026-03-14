@@ -84,7 +84,7 @@ async function ensureYtDlp() {
                     }
                 }).on('error', reject);
             }
-            download('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp');
+            download('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux');
         });
         fs.chmodSync(localPath, '755');
         console.log('[YT-DLP] Binary downloaded!');
