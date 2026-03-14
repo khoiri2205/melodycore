@@ -63,9 +63,33 @@ async function getSpotifyPlaylist(url) {
 const queues = new Map();
 const YTDLP_PATH = process.platform === 'win32'
     ? path.join(__dirname, 'yt-dlp.exe')
-    : ['/usr/local/bin/yt-dlp', '/root/.local/bin/yt-dlp', '/usr/bin/yt-dlp']
-        .find(p => { try { require('fs').accessSync(p); return true; } catch { return false; } })
-      || 'yt-dlp';
+    : path.join(__dirname, 'yt-dlp');
+
+async function ensureYtDlp() {
+    if (process.platform === 'win32') return;
+    const localPath = path.join(__dirname, 'yt-dlp');
+    if (!fs.existsSync(localPath)) {
+        console.log('[YT-DLP] Downloading yt-dlp binary...');
+        const https = require('https');
+        const file = fs.createWriteStream(localPath);
+        await new Promise((resolve, reject) => {
+            function download(url) {
+                https.get(url, res => {
+                    if (res.statusCode === 301 || res.statusCode === 302) {
+                        download(res.headers.location);
+                    } else {
+                        res.pipe(file);
+                        file.on('finish', () => { file.close(); resolve(); });
+                    }
+                }).on('error', reject);
+            }
+            download('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp');
+        });
+        fs.chmodSync(localPath, '755');
+        console.log('[YT-DLP] Binary downloaded!');
+    }
+}
+
 
 function getAudioStream(url) {
     console.log(`[YT-DLP] Streaming: ${url}`);
@@ -264,6 +288,7 @@ async function playNext(guildId) {
 client.once('clientReady', async () => {
     console.log('✅ MELODYCORE SUDAH HIDUP!');
     console.log(`Bot login sebagai: ${client.user.tag}`);
+    await ensureYtDlp();
     await refreshSpotifyToken();
 });
 
