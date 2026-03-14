@@ -111,7 +111,7 @@ async function getAudioStream(url) {
         console.log('[STREAM] play-dl failed, trying yt-dlp...');
         const cookiesPath = '/app/cookies.txt';
         const nodePath = process.execPath;
-        const args = ['-f', 'bestaudio/best[ext=webm]/bestaudio/best[ext=m4a]/bestaudio', '--no-playlist', '--js-runtimes', 'nodejs:' + nodePath, '-o', '-'];
+        const args = ['-f', 'bestaudio/best[ext=webm]/bestaudio/best[ext=m4a]/bestaudio', '--no-playlist', '--js-runtimes', 'node:' + nodePath, '-o', '-'];
         if (fs.existsSync(cookiesPath)) args.push('--cookies', cookiesPath);
         args.push(url);
         const proc = spawn(YTDLP_PATH, args);
