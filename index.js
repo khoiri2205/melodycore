@@ -97,7 +97,7 @@ function getAudioStream(url) {
     const proc = spawn(YTDLP_PATH, [
         '-f', 'bestaudio/best',
         '--no-playlist',
-        '--extractor-args', 'youtube:player_client=web',
+        '--extractor-args', 'youtube:player_client=android,web',
         '-o', '-',
         url
     ]);
